@@ -96,8 +96,41 @@ def split_file(original_fname, output_dir_fname, n_splits = 15, delimitor = '\n'
         output_f.close()
 
 
+def make_dev_train_sets(original_fname, names, percents, scramble = False):
+    """
+    """
+    assert(abs(sum(percents) - 1) < 1e-5)
+    assert(len(names) == len(percents))
 
-def randomly_sample_file(original_fname, output_fname, n_lines_to_output = 100, delimitor = '\n'):
+    if scramble:
+        scramble_file_lines(original_fname, original_fname  + '.scrambled')
+        original_fname = original_fname  + '.scrambled'
+
+    lines_in_file = 0
+    with open(original_fname, 'r') as f:
+        for line in f:
+            lines_in_file += 1
+
+    lines_per_split = [p*lines_in_file for p in percents]
+    lines_per_split = [np.ceil(n) for n in lines_per_split]
+
+    with open(original_fname, 'r') as input_f:
+        cur_split = 0
+        output_f = open(names[0], 'w')
+        i = 0
+        for line in input_f:
+            if i%lines_per_split[cur_split] == 0 and i:
+                cur_split += 1
+                i=0
+                output_f.close()
+                output_f = open(names[cur_split], 'w')
+            output_f.write(line)
+            i += 1
+
+        output_f.close()
+
+
+def randomly_sample_file(original_fname, output_fname, n_lines_to_output = 100, delimitor = '\n', preserve_first_line = 0):
     """given the name of some unnecessarily large file that you have to work with, original_fname,
     randomly samples it to have n_lines_to_output.  This function is used for when you want to
     do some testing of your script on a pared down file first.
@@ -107,6 +140,8 @@ def randomly_sample_file(original_fname, output_fname, n_lines_to_output = 100, 
 
     Usage: 
     randomly_sample_file(["./data/features.txt", "./data/target.txt"], ["./data/dev_features.txt", "./data/dev_target.txt"], 200)
+
+    randomly_sample_file("data/clean_mail.tsv", "data/toy.tsv")
 
     """
     assert(type(original_fname) == type(output_fname))
@@ -122,8 +157,10 @@ def randomly_sample_file(original_fname, output_fname, n_lines_to_output = 100, 
         for line in f:
             lines_in_file += 1
 
-    line_idxs_to_output = range(n_lines_to_output); random.shuffle(line_idxs_to_output)
-    line_idxs_to_output = set(line_idxs_to_output[0:lines_in_file])
+    line_idxs_to_output = range(lines_in_file)[1:] if preserve_first_line else np.arange(lines_in_file)
+    np.random.shuffle(line_idxs_to_output)
+    if preserve_first_line: line_idxs_to_output = [0] + line_idxs_to_output
+    line_idxs_to_output = set(line_idxs_to_output[0:n_lines_to_output])
 
     for input_fname_i, output_fname_i in zip(original_fname, output_fname): 
         with open(input_fname_i, 'r') as input_i, open(output_fname_i, 'w') as output_i:
@@ -134,7 +171,7 @@ def randomly_sample_file(original_fname, output_fname, n_lines_to_output = 100, 
 
 def scramble_file_lines(original_fname, output_fname, delimitor = '\n'):
     """randomly permutes the lines in the input file.  If the input 
-    file is a list, permutes all lines in the iput files in the asme way.
+    file is a list, permutes all lines in the iput files in the same way.
     Useful if you are doing SGD, for instance.
 
     Usage: 
@@ -157,7 +194,7 @@ def scramble_file_lines(original_fname, output_fname, delimitor = '\n'):
                     lines.append([])
                 lines[i].append(line)
 
-    random.shuffle(lines)
+    np.random.shuffle(lines)
 
     for i, output_fname_i in enumerate(output_fname): 
         with open(output_fname_i, 'w') as output_i:
@@ -229,6 +266,9 @@ def convert_to_png(denoised_image):
 if __name__ == '__main__':
     print 'You are running this from the command line, so you must be demoing it!'
     start_time = time.time()
+    #make_dev_train_sets('data/clean_mail.tsv', ['clean_mail_train.tsv', 'clean_mail_dev.tsv', 'clean_mail_test.tsv'], [.7, .2, .1], scramble = True)
+    randomly_sample_file("data/clean_mail.tsv", "data/toy_train.tsv", preserve_first_line = 1)
+    randomly_sample_file("data/clean_mail.tsv", "data/toy_test.tsv", preserve_first_line = 1)
     k = 10
     domain = range(k)
     f_1 = [i**2 for i in domain]
