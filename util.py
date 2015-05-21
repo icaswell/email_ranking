@@ -102,6 +102,8 @@ def make_dev_train_sets(original_fname, names, percents, scramble = False):
     assert(abs(sum(percents) - 1) < 1e-5)
     assert(len(names) == len(percents))
 
+    print 'hello'
+
     if scramble:
         scramble_file_lines(original_fname, original_fname  + '.scrambled')
         original_fname = original_fname  + '.scrambled'
